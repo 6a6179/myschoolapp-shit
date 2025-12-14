@@ -19,9 +19,8 @@ headers = {
     "cookie": COOKIE,
 }
 
-params = {
-    "displayByDueDate": "true"
-}
+params = {"displayByDueDate": "true"}
+
 
 def clean_text(text: str) -> str:
     if not text:
@@ -29,14 +28,32 @@ def clean_text(text: str) -> str:
     text = unescape(text)
     return re.sub(r"<.*?>", "", text).strip()
 
-response = requests.get(API_URL, headers=headers, params=params, timeout=30)
 
+# completed = 1
+# in progress = 0
+# overdue = 2
+# to do = -2147483648  (min 32-bit int for sum reason lol)
+STATUS_MAP = {
+    1: "Completed",
+    0: "In progress",
+    2: "Overdue",
+    -2147483648: "To do",
+}
+
+
+def status_label(code) -> str:
+    try:
+        code_int = int(code)
+    except (TypeError, ValueError):
+        return "Unknown"
+    return STATUS_MAP.get(code_int, f"Unknown ({code_int})")
+
+
+response = requests.get(API_URL, headers=headers, params=params, timeout=30)
 print("Status:", response.status_code)
 response.raise_for_status()
-
 data = response.json()
 
-# pandas shit
 sections = [
     "DueToday",
     "DueTomorrow",
@@ -51,6 +68,7 @@ sections = [
 rows = []
 for section in sections:
     for item in data.get(section, []):
+        code = item.get("StudentStatus")
         rows.append({
             "Category": section,
             "Class": item.get("GroupName"),
@@ -58,15 +76,17 @@ for section in sections:
             "Due": item.get("DateDue"),
             "Type": item.get("AssignmentType"),
             "Points": item.get("MaxPoints"),
+            "StudentStatusCode": code,
+            "StudentStatus": status_label(code),
         })
 
 df = pd.DataFrame(rows)
 
-# Convert Due to datetime
 df["Due"] = pd.to_datetime(df["Due"], errors="coerce")
 
-# Sort by due date
-df = df.sort_values(["Due", "Class"], na_position="last").reset_index(drop=True)
+STATUS_ORDER = {"Overdue": 0, "To do": 1, "In progress": 2, "Completed": 3}
+df["StatusRank"] = df["StudentStatus"].map(STATUS_ORDER).fillna(99).astype(int)
 
-# Show a clean view!
-print(df[["Category", "Class", "Assignment", "Due", "Points"]].to_string(index=False))
+df = df.sort_values(["StatusRank", "Due", "Class"], na_position="last").reset_index(drop=True)
+
+print(df[["Category", "StudentStatus", "Class", "Assignment", "Due", "Points"]].to_string(index=False))
