@@ -1,4 +1,4 @@
-# myschoolapp-api
+# myschoolapp-shit
 
 ## Authentication limitations
 
