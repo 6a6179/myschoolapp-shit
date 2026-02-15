@@ -9,7 +9,7 @@
 
 1. Clone the repository and enter the project folder:
 ```powershell
-git clone <your-repo-url>
+git clone https://github.com/6a6179/myschoolapp-shit.git
 cd myschoolapp-shit
 ```
 
@@ -48,7 +48,7 @@ python get.py
 
 1. Clone the repository and enter the project folder:
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/6a6179/myschoolapp-shit.git
 cd myschoolapp-shit
 ```
 
